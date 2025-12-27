@@ -21,6 +21,7 @@ import ExperiencesSection from './admin/sections/ExperiencesSection.jsx'
 import MessagesSection from './admin/sections/MessagesSection.jsx'
 import ContentStudioSection from './admin/sections/ContentStudioSection.jsx'
 import GallerySection from './admin/sections/GallerySection.jsx'
+import ReadingLogSection from './admin/sections/ReadingLogSection.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -52,6 +53,7 @@ createRoot(document.getElementById('root')).render(
               <Route path="messages" element={<MessagesSection />} />
               <Route path="content" element={<ContentStudioSection />} />
               <Route path="gallery" element={<GallerySection />} />
+              <Route path="reading" element={<ReadingLogSection />} />
             </Route>
           </Routes>
         </BlogProvider>

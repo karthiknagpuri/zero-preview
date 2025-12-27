@@ -1,162 +1,265 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 export const ZeroInfinity = ({ theme }) => {
-  const [isTransformed, setIsTransformed] = useState(false);
-
-  const handleTransform = () => {
-    setIsTransformed(true);
-    setTimeout(() => setIsTransformed(false), 3000);
-  };
+  const LIFE_CHANGING_BLOG_URL =
+    'https://3010tangents.wordpress.com/2014/09/08/zero-and-infinity-from-nothing-to-everything/';
 
   return (
     <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: '32px',
-      padding: '40px 20px',
+      maxWidth: '900px',
+      margin: '0 auto',
     }}>
-      {/* SVG Animation Container */}
+      {/* Section Label */}
       <div style={{
-        position: 'relative',
-        width: '200px',
-        height: '200px',
+        fontFamily: "'Space Mono', monospace",
+        fontSize: '11px',
+        letterSpacing: '2px',
+        color: theme.accent,
+        marginBottom: '16px',
       }}>
-        <svg viewBox="0 0 200 200" style={{ width: '100%', height: '100%' }}>
-          <defs>
-            <linearGradient id="zeroGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor={theme.accent} stopOpacity="0.8" />
-              <stop offset="100%" stopColor={theme.accent} stopOpacity="0.4" />
-            </linearGradient>
-          </defs>
-
-          {/* Animated particles */}
-          <circle cx="50" cy="50" r="2" fill={theme.accent} opacity="0.6">
-            <animate attributeName="cy" values="50;40;50" dur="3s" repeatCount="indefinite" />
-            <animate attributeName="opacity" values="0.6;1;0.6" dur="3s" repeatCount="indefinite" />
-          </circle>
-          <circle cx="150" cy="75" r="2" fill={theme.accent} opacity="0.6">
-            <animate attributeName="cy" values="75;65;75" dur="4s" repeatCount="indefinite" />
-            <animate attributeName="opacity" values="0.6;1;0.6" dur="4s" repeatCount="indefinite" />
-          </circle>
-          <circle cx="75" cy="150" r="2" fill={theme.accent} opacity="0.6">
-            <animate attributeName="cy" values="150;140;150" dur="3.5s" repeatCount="indefinite" />
-            <animate attributeName="opacity" values="0.6;1;0.6" dur="3.5s" repeatCount="indefinite" />
-          </circle>
-          <circle cx="125" cy="175" r="2" fill={theme.accent} opacity="0.6">
-            <animate attributeName="cy" values="175;165;175" dur="2.5s" repeatCount="indefinite" />
-            <animate attributeName="opacity" values="0.6;1;0.6" dur="2.5s" repeatCount="indefinite" />
-          </circle>
-
-          {/* Main symbol */}
-          <text
-            x="100"
-            y="125"
-            fontFamily="'Space Mono', monospace"
-            fontSize={isTransformed ? '60' : '100'}
-            fill="url(#zeroGradient)"
-            textAnchor="middle"
-            style={{
-              transition: 'all 0.5s ease',
-              opacity: 0.9,
-            }}
-          >
-            {isTransformed ? '∞' : '0'}
-          </text>
-
-          {/* Rotating ring */}
-          <circle
-            cx="100"
-            cy="100"
-            r="85"
-            fill="none"
-            stroke={theme.accent}
-            strokeWidth="0.5"
-            strokeDasharray="10,10"
-            opacity="0.3"
-            style={{
-              transformOrigin: '100px 100px',
-              animation: 'rotate 30s linear infinite',
-            }}
-          />
-        </svg>
+        PHILOSOPHY
       </div>
 
-      {/* Text content */}
-      <div style={{
-        maxWidth: '500px',
-        textAlign: 'center',
+      {/* Main Title */}
+      <h2 style={{
+        fontFamily: "'Instrument Serif', serif",
+        fontWeight: '400',
+        fontStyle: 'italic',
+        fontSize: 'clamp(32px, 8vw, 48px)',
+        color: theme.text,
+        marginBottom: '40px',
+        lineHeight: '1.1',
       }}>
-        <h2 style={{
+        the paradox of being zero
+      </h2>
+
+      {/* Opening Story */}
+      <div style={{
+        fontSize: 'clamp(16px, 4vw, 20px)',
+        lineHeight: '1.7',
+        color: theme.textSecondary,
+        marginBottom: '32px',
+      }}>
+        <p style={{ marginBottom: '24px' }}>
+          During COVID, I sat in a hospital waiting hall after 14 days in ICU with my family. 
+          Scrolling through my phone for vaccine updates, I stumbled upon a random blog from 2014. 
+          It spoke of <span style={{ color: theme.text, fontWeight: '500' }}>sunya</span>—the 
+          Sanskrit word for zero that also means universe. That moment changed everything.
+        </p>
+      </div>
+
+      {/* Featured Quote Block */}
+      <div style={{
+        padding: 'clamp(24px, 5vw, 40px)',
+        background: 'rgba(78,205,196,0.05)',
+        borderLeft: '3px solid #4ECDC4',
+        marginBottom: '40px',
+      }}>
+        <p style={{
           fontFamily: "'Instrument Serif', serif",
-          fontSize: 'clamp(24px, 5vw, 32px)',
+          fontSize: 'clamp(18px, 4vw, 24px)',
           fontStyle: 'italic',
+          lineHeight: '1.6',
           color: theme.text,
           marginBottom: '16px',
         }}>
-          the paradox of being zero
-        </h2>
-
-        <p style={{
-          fontFamily: "'Space Mono', monospace",
-          fontSize: '13px',
-          lineHeight: '1.8',
-          color: theme.textSecondary,
-          marginBottom: '12px',
-        }}>
-          Zero isn't emptiness—it's infinite possibility. In mathematics, zero is the origin point
-          from which all numbers emerge. In entrepreneurship, it's the blank canvas where breakthrough
-          ideas are born.
+          "Sunya" means <span style={{ color: '#4ECDC4', fontWeight: '600' }}>void</span>—and 
+          paradoxically, the same word means <span style={{ color: '#4ECDC4', fontWeight: '600' }}>universe</span>, 
+          infinite energy. You are nothing and you are everything.
         </p>
-
         <p style={{
-          fontFamily: "'Space Mono', monospace",
-          fontSize: '13px',
-          lineHeight: '1.8',
+          fontSize: '14px',
           color: theme.textSecondary,
-          marginBottom: '24px',
+          lineHeight: '1.7',
         }}>
-          Every startup begins at zero. Every ecosystem starts from nothing. Yet within that void
-          lies unlimited potential—the space where innovation flourishes and impossible dreams
-          transform into reality.
+          That blog gave me back my parents. It gave me back my life. It gave me hope when I had none.
         </p>
-
-        <button
-          onClick={handleTransform}
-          disabled={isTransformed}
-          style={{
-            background: 'transparent',
-            border: `1px solid ${theme.accent}`,
-            color: isTransformed ? theme.textMuted : theme.accent,
-            padding: '12px 24px',
-            fontFamily: "'Space Mono', monospace",
-            fontSize: '12px',
-            letterSpacing: '1px',
-            cursor: isTransformed ? 'default' : 'pointer',
-            transition: 'all 0.3s ease',
-            borderRadius: '4px',
-          }}
-          onMouseEnter={(e) => {
-            if (!isTransformed) {
-              e.target.style.background = theme.accent;
-              e.target.style.color = theme.bg;
-            }
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.background = 'transparent';
-            e.target.style.color = isTransformed ? theme.textMuted : theme.accent;
-          }}
-        >
-          {isTransformed ? 'transforming...' : 'transform zero → ∞'}
-        </button>
       </div>
 
-      <style>{`
-        @keyframes rotate {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+      {/* Why Zero */}
+      <div style={{
+        fontSize: 'clamp(16px, 4vw, 20px)',
+        lineHeight: '1.7',
+        color: theme.textSecondary,
+        marginBottom: '40px',
+      }}>
+        <p>
+          I chose to call myself Zero—not from lack of value or confidence, but from{' '}
+          <span style={{ color: theme.text, fontWeight: '500' }}>perspective</span>. 
+          When I feel I know nothing, I am nothing, that lightness opens me to more learning, 
+          more failures, more progress. It gives me space to evolve, experiment, and feel.
+        </p>
+      </div>
+
+      {/* Flow State Card */}
+      <div style={{
+        padding: 'clamp(24px, 5vw, 32px)',
+        background: theme.cardBg,
+        border: `1px solid ${theme.cardBorder}`,
+        borderRadius: '4px',
+        marginBottom: '40px',
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'baseline',
+          justifyContent: 'space-between',
+          gap: '16px',
+          flexWrap: 'wrap',
+          marginBottom: '16px',
+        }}>
+          <div style={{
+            fontFamily: "'Space Mono', monospace",
+            fontSize: '11px',
+            letterSpacing: '1.5px',
+            color: theme.accent,
+          }}>
+            FLOW STATE = ZERO-STATE
+          </div>
+          <div style={{
+            fontFamily: "'Space Mono', monospace",
+            fontSize: '10px',
+            color: theme.textMuted,
+          }}>
+            scientifically proven
+          </div>
+        </div>
+
+        <p style={{
+          fontSize: '15px',
+          lineHeight: '1.8',
+          color: theme.textSecondary,
+          marginBottom: '16px',
+        }}>
+          When you enter flow, your mind quiets the inner narrator. In neuroscience, this correlates 
+          with reduced activity in self-referential networks (the "default mode") and tighter coupling 
+          between attention and action.
+        </p>
+
+        <p style={{
+          fontFamily: "'Instrument Serif', serif",
+          fontSize: '17px',
+          fontStyle: 'italic',
+          color: theme.text,
+        }}>
+          Subjectively, it feels like becoming zero: less ego-noise, fewer distractions, 
+          a clean channel for execution.
+        </p>
+
+        <div style={{
+          display: 'flex',
+          gap: '24px',
+          marginTop: '20px',
+          paddingTop: '16px',
+          borderTop: `1px solid ${theme.border}`,
+          fontFamily: "'Space Mono', monospace",
+          fontSize: '11px',
+          color: theme.textMuted,
+        }}>
+          <span>less self-talk</span>
+          <span>•</span>
+          <span>more signal</span>
+        </div>
+      </div>
+
+      {/* Beyond Labels */}
+      <div style={{
+        fontSize: 'clamp(16px, 4vw, 20px)',
+        lineHeight: '1.7',
+        color: theme.textSecondary,
+        marginBottom: '40px',
+      }}>
+        <p>
+          Being Zero means going beyond social tags—student, founder, professional. These labels limit you. 
+          Your potential is <span style={{ color: theme.accent, fontWeight: '500' }}>immense</span>. 
+          Live every day as your first and last. Every day is a new birthday. Every day is a new year. 
+          Every day is a new life.
+        </p>
+        <p style={{
+          fontFamily: "'Instrument Serif', serif",
+          fontStyle: 'italic',
+          color: theme.text,
+          marginTop: '16px',
+        }}>
+          The clock resets at midnight—what are you doing with that energy before it does?
+        </p>
+      </div>
+
+      {/* Final Quote */}
+      <div style={{
+        padding: 'clamp(24px, 5vw, 40px)',
+        background: 'rgba(196,120,90,0.05)',
+        borderLeft: '3px solid #C4785A',
+        marginBottom: '40px',
+      }}>
+        <p style={{
+          fontFamily: "'Instrument Serif', serif",
+          fontSize: 'clamp(18px, 4vw, 22px)',
+          fontStyle: 'italic',
+          lineHeight: '1.6',
+          color: theme.text,
+          marginBottom: '12px',
+        }}>
+          "It is neither void nor universe. It is a prospect to what we are looking at."
+        </p>
+        <p style={{
+          fontFamily: "'Space Mono', monospace",
+          fontSize: '11px',
+          color: theme.textMuted,
+        }}>
+          — from the blog that changed my life, 2014
+        </p>
+      </div>
+
+      {/* CTA */}
+      <div style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: '16px',
+      }}>
+        <a
+          href={LIFE_CHANGING_BLOG_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '14px 24px',
+            background: 'transparent',
+            border: `1px solid ${theme.accent}`,
+            borderRadius: '980px',
+            color: theme.accent,
+            fontFamily: "'Space Mono', monospace",
+            fontSize: '12px',
+            letterSpacing: '0.5px',
+            textDecoration: 'none',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            cursor: 'pointer',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = theme.accent;
+            e.currentTarget.style.color = theme.bg;
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.color = theme.accent;
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+        >
+          Read the blog that changed my life
+          <span>↗</span>
+        </a>
+
+        <span style={{
+          fontFamily: "'Space Mono', monospace",
+          fontSize: '11px',
+          color: theme.textMuted,
+        }}>
+          2014 · Zero and Infinity: from Nothing to Everything
+        </span>
+      </div>
     </div>
   );
 };

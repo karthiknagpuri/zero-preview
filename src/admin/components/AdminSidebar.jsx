@@ -31,6 +31,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
     { path: '/admin/gallery', label: 'Gallery', icon: 'PHOTOS' },
     { path: '/admin/map', label: 'Map Editor', icon: 'MAP' },
     { path: '/admin/experiences', label: 'Experiences', icon: 'WORK' },
+    { path: '/admin/reading', label: 'Reading Log', icon: 'BOOKS' },
     { path: '/admin/messages', label: 'Messages', icon: 'INBOX' },
     { path: '/admin/content', label: 'Content Studio', icon: 'CREATE' },
   ];

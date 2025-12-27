@@ -5,11 +5,13 @@ import BlogAdmin from './BlogAdmin';
 import { InteractiveIndiaMap } from './components/InteractiveMap';
 import { Terminal } from './components/Terminal';
 import { useKeyboardShortcuts, KeyboardHelp } from './components/KeyboardShortcuts';
-import { JourneyCards } from './components/JourneyCards';
+import BB8Toggle from './components/BB8Toggle';
+import MatrixText from './components/MatrixText';
 import { ZeroInfinity } from './components/ZeroInfinity';
 import { VisitorCounter } from './components/VisitorCounter';
-import { ContactForm, ContactButtons } from './components/ContactForm';
+import { ContactForm } from './components/ContactForm';
 import { supabase } from './supabaseClient';
+import profileHeroImg from './assets/profile-hero.png';
 
 // Custom hook for intersection observer animations
 const useInView = (threshold = 0.1) => {
@@ -224,21 +226,27 @@ export default function ZeroWebsite() {
   // Gallery images state - fetched from Supabase
   const [galleryImages, setGalleryImages] = useState([]);
 
+  // Reading log state
+  const [readingLogOpen, setReadingLogOpen] = useState(false);
+  const [readingLogBooks, setReadingLogBooks] = useState([]);
+  const [readingLogLastUpdated, setReadingLogLastUpdated] = useState(null);
+
   // Fallback data for experiences
   const fallbackExperiences = [
     {
       title: 'EvolveX',
       role: 'Founder & CEO (2019-Present)',
-      description: 'Connecting startup ecosystems across Bharat. 100+ startups, ecosystem partners like Draper Startup House, Headstart Telangana.',
+      description: 'Founder-first ecosystem infrastructure and discovery layer. Evaluated, supported, and accelerated 100+ early-stage startups across Tier-2/3 India through structured founder programs, Curated Invite-Only events, and long-term operator support.',
       status_badge: 'BUILDING',
       color: '#4ECDC4',
     },
     {
       title: 'Jagriti Yatra',
-      role: 'Manager | Selections & Alumni',
-      description: "India's largest entrepreneurship train journey. 15-day, 8,000-km across Middle India. Onboarding 500+ changemakers.",
+      role: 'Manager — Selections & Alumni Relations',
+      description: "Co-Creating and leading selection systems, community of one of India's largest entrepreneurship platforms, evaluating thousands of applicants annually and onboarding 525 changemakers across Bharat.",
       status_badge: 'LEADING',
       color: '#C4785A',
+      video_url: 'https://www.linkedin.com/embed/feed/update/urn:li:activity:7256892510436802560',
     },
     {
       title: 'EdVenture Park',
@@ -251,8 +259,9 @@ export default function ZeroWebsite() {
       title: 'Nexteen',
       role: 'CTO & Co-Founder',
       description: 'Tech infrastructure connecting teenagers with real-world opportunities and innovation programs.',
-      status_badge: 'CO-FOUNDING',
+      status_badge: 'TOOK EXIT',
       color: '#9B59B6',
+      video_url: 'https://www.youtube.com/embed/REd3f2BdVwE?start=143',
     },
   ];
 
@@ -319,6 +328,35 @@ export default function ZeroWebsite() {
 
     fetchGalleryImages();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fetch reading log from Supabase
+  useEffect(() => {
+    const fetchReadingLog = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('reading_log')
+          .select('*')
+          .eq('is_visible', true)
+          .order('date_read', { ascending: false });
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          setReadingLogBooks(data);
+          // Get the most recent update time
+          const latestUpdate = data.reduce((latest, book) => {
+            const bookDate = new Date(book.updated_at || book.created_at);
+            return bookDate > latest ? bookDate : latest;
+          }, new Date(0));
+          setReadingLogLastUpdated(latestUpdate);
+        }
+      } catch (error) {
+        console.log('Reading log not available:', error);
+      }
+    };
+
+    fetchReadingLog();
   }, []);
 
   // Theme toggle handler
@@ -778,9 +816,40 @@ export default function ZeroWebsite() {
           }
         }
 
+        /* Hero section responsive */
+        .hero-container {
+          flex-direction: column-reverse;
+          gap: 40px;
+          text-align: center;
+        }
+
+        .hero-container .hero-text {
+          align-items: center;
+        }
+
+        .hero-container .hero-image img {
+          width: clamp(200px, 50vw, 280px);
+        }
+
+        @media (min-width: 768px) {
+          .hero-container {
+            flex-direction: row;
+            gap: 60px;
+            text-align: left;
+          }
+
+          .hero-container .hero-text {
+            align-items: flex-start;
+          }
+
+          .hero-container .hero-image img {
+            width: clamp(280px, 30vw, 420px);
+          }
+        }
+
         /* Typography responsive */
         .hero-title {
-          font-size: clamp(56px, 18vw, 180px);
+          font-size: clamp(48px, 15vw, 180px);
         }
 
         .section-title {
@@ -1049,34 +1118,45 @@ export default function ZeroWebsite() {
 
         {/* Desktop: Theme Toggle + CTA */}
         <div className="nav-desktop" style={{ gap: '16px', alignItems: 'center' }}>
+          {/* Reading Log Icon */}
           <button
-            onClick={toggleTheme}
+            onClick={() => setReadingLogOpen(true)}
             style={{
-              background: theme.bgTertiary,
+              background: 'none',
               border: 'none',
-              borderRadius: '50%',
-              width: '32px',
-              height: '32px',
               cursor: 'pointer',
+              padding: '8px 12px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '14px',
-              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              gap: '6px',
               color: theme.textSecondary,
+              transition: 'color 0.2s ease',
+              fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+              fontSize: '11px',
+              fontWeight: '500',
+              letterSpacing: '0.5px',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'scale(1.1)';
-              e.currentTarget.style.background = theme.accentBg;
+              e.currentTarget.style.color = theme.accent;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.background = theme.bgTertiary;
+              e.currentTarget.style.color = theme.textSecondary;
             }}
-            aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            title="Reading Log"
           >
-            {isDarkMode ? '☀️' : '🌙'}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+            </svg>
+            READING
           </button>
+          <div style={{ transform: 'scale(0.25)', transformOrigin: 'center', marginRight: '-60px' }}>
+            <BB8Toggle 
+              checked={!isDarkMode} 
+              onChange={toggleTheme}
+            />
+          </div>
           <a
             href="mailto:nanikarthik98@gmail.com"
             style={{
@@ -1147,6 +1227,26 @@ export default function ZeroWebsite() {
         >
           SAY HI →
         </a>
+        {/* Mobile Reading Log */}
+        <button
+          onClick={() => {
+            setReadingLogOpen(true);
+            setMobileMenuOpen(false);
+          }}
+          className="mobile-menu-item"
+          style={{
+            background: 'none',
+            border: 'none',
+            color: theme.textSecondary,
+            marginTop: '8px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          📚 Reading Log
+        </button>
         {/* Mobile Theme Toggle */}
         <button
           onClick={() => {
@@ -1168,6 +1268,152 @@ export default function ZeroWebsite() {
           {isDarkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
         </button>
       </div>
+
+      {/* Reading Log Modal */}
+      {readingLogOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            zIndex: 200,
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            padding: '60px 20px 20px',
+            overflowY: 'auto',
+          }}
+          onClick={() => setReadingLogOpen(false)}
+        >
+          <div
+            style={{
+              background: theme.bgElevated,
+              border: `1px solid ${theme.border}`,
+              borderRadius: '16px',
+              maxWidth: '600px',
+              width: '100%',
+              maxHeight: 'calc(100vh - 100px)',
+              overflow: 'hidden',
+              boxShadow: theme.shadowLg,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{
+              padding: '20px 24px',
+              borderBottom: `1px solid ${theme.border}`,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={theme.accent} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                </svg>
+                <div>
+                  <h2 style={{
+                    fontFamily: "'Space Mono', monospace",
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: theme.text,
+                    margin: 0,
+                  }}>
+                    reading log
+                  </h2>
+                  {readingLogLastUpdated && (
+                    <span style={{
+                      fontFamily: "'Space Mono', monospace",
+                      fontSize: '11px',
+                      color: theme.textMuted,
+                    }}>
+                      (last updated: {readingLogLastUpdated.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })})
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button
+                  onClick={() => setReadingLogOpen(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: theme.textMuted,
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    fontSize: '20px',
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            {/* Books List */}
+            <div style={{
+              maxHeight: 'calc(100vh - 200px)',
+              overflowY: 'auto',
+              padding: '8px 0',
+            }}>
+              {readingLogBooks.length === 0 ? (
+                <div style={{
+                  padding: '48px 24px',
+                  textAlign: 'center',
+                  fontFamily: "'Space Mono', monospace",
+                  fontSize: '13px',
+                  color: theme.textMuted,
+                }}>
+                  No books in reading log yet.
+                </div>
+              ) : (
+                readingLogBooks.map((book) => (
+                  <div
+                    key={book.id}
+                    style={{
+                      padding: '16px 24px',
+                      borderBottom: `1px solid ${theme.border}`,
+                    }}
+                  >
+                    <div style={{
+                      fontFamily: "'Space Mono', monospace",
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: theme.accent,
+                      marginBottom: '4px',
+                      lineHeight: '1.4',
+                    }}>
+                      {book.title.toLowerCase()}
+                    </div>
+                    <div style={{
+                      fontFamily: "'Space Mono', monospace",
+                      fontSize: '12px',
+                      color: theme.textMuted,
+                      marginBottom: '6px',
+                    }}>
+                      by {book.author.toLowerCase()}
+                      {book.date_read && ` · ${new Date(book.date_read).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}`}
+                    </div>
+                    <div style={{
+                      fontFamily: "'Space Mono', monospace",
+                      fontSize: '12px',
+                      color: theme.textMuted,
+                    }}>
+                      {book.status === 'reading' ? (
+                        <span style={{ color: theme.accent }}>currently reading</span>
+                      ) : book.rating ? (
+                        <span>{'★'.repeat(book.rating)}{'☆'.repeat(5 - book.rating)} {book.rating} stars</span>
+                      ) : null}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Terminal View - Separate Tab */}
       {activeView === 'terminal' && (
@@ -1244,39 +1490,53 @@ export default function ZeroWebsite() {
         padding: '120px max(24px, 5vw) 80px',
         position: 'relative',
       }}>
-        <div style={{ maxWidth: '980px', width: '100%' }}>
+        <div className="hero-container" style={{
+          maxWidth: '1200px',
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+        }}>
+          {/* Left side - Text content */}
+          <div className="hero-text" style={{ flex: '1', minWidth: '280px', maxWidth: '680px', display: 'flex', flexDirection: 'column' }}>
           <div style={{
             display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            marginBottom: '20px',
+            alignItems: 'baseline',
+            gap: '12px',
+            marginBottom: '24px',
             animation: 'fadeIn 0.8s ease forwards',
+            flexWrap: 'wrap',
           }}>
-            <span style={{ fontSize: '24px' }}>👋</span>
-            <span style={{
-              fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
-              fontSize: '14px',
-              color: theme.textSecondary,
-              fontWeight: '400',
+            <span style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px',
             }}>
-              Hey, I'm
+              <span style={{ fontSize: '24px' }}>👋</span>
+              <span style={{
+                fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+                fontSize: '14px',
+                color: theme.textSecondary,
+                fontWeight: '400',
+              }}>
+                Hey, I'm
+              </span>
+            </span>
+            <span className="hero-title" style={{
+              fontFamily: "'Instrument Serif', serif",
+              fontWeight: '400',
+              fontStyle: 'italic',
+              lineHeight: '1',
+              color: theme.text,
+              letterSpacing: '-2px',
+            }}>
+              <MatrixText 
+                defaultText="Zero" 
+                hoverText="Karthik Nagapuri"
+              />
             </span>
           </div>
-
-          <h1 className="hero-title" style={{
-            fontFamily: "'Instrument Serif', serif",
-            fontWeight: '400',
-            fontStyle: 'italic',
-            lineHeight: '0.95',
-            marginBottom: '24px',
-            animation: 'fadeIn 0.8s ease 0.15s forwards',
-            opacity: 0,
-            animationFillMode: 'forwards',
-            color: theme.text,
-            letterSpacing: '-2px',
-          }}>
-            Zero
-          </h1>
 
           <div style={{
             fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
@@ -1294,19 +1554,56 @@ export default function ZeroWebsite() {
 
           <p style={{
             fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-            fontSize: 'clamp(20px, 3.5vw, 28px)',
+            fontSize: 'clamp(18px, 3.5vw, 28px)',
             lineHeight: '1.4',
-            maxWidth: '680px',
+            maxWidth: '100%',
             color: theme.textSecondary,
             fontWeight: '400',
             animation: 'fadeIn 0.8s ease 0.45s forwards',
             opacity: 0,
             animationFillMode: 'forwards',
             letterSpacing: '-0.3px',
+            wordWrap: 'break-word',
+            overflowWrap: 'break-word',
           }}>
-            <span style={{ color: theme.text }}>AI Engineer</span> · <span style={{ color: theme.text }}>Ecosystem Builder</span> · <span style={{ color: theme.text }}>TEDx Speaker</span>
+            <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+              <span style={{ 
+                color: theme.textMuted, 
+                fontWeight: '600', 
+                textDecoration: 'line-through',
+                textDecorationColor: theme.accent,
+                opacity: 0.6,
+              }}>Founder</span>
+              <svg 
+                width="24" 
+                height="16" 
+                viewBox="0 0 24 16" 
+                fill="none" 
+                style={{ marginLeft: '2px', marginRight: '2px', flexShrink: 0 }}
+              >
+                <path 
+                  d="M2 8C2 8 6 2 12 8C18 14 22 8 22 8" 
+                  stroke={theme.accent} 
+                  strokeWidth="2" 
+                  strokeLinecap="round"
+                  fill="none"
+                />
+                <path 
+                  d="M18 5L22 8L18 11" 
+                  stroke={theme.accent} 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                  fill="none"
+                />
+              </svg>
+            </span>
+            <span style={{ color: theme.text, fontWeight: '600' }}>Builder</span> · <span style={{ color: theme.text, fontWeight: '600' }}>Ecosystem Investor</span>
             <br />
-            <span style={{ fontSize: 'clamp(14px, 3.5vw, 17px)', marginTop: '12px', display: 'block', lineHeight: '1.7' }}>
+            <span style={{ fontSize: 'clamp(13px, 3vw, 17px)', marginTop: '12px', display: 'block', lineHeight: '1.7', color: theme.textSecondary }}>
+              Designing platforms, selection systems, and founder-first infrastructure across Bharat.
+            </span>
+            <span style={{ fontSize: 'clamp(13px, 3vw, 17px)', marginTop: '8px', display: 'block', lineHeight: '1.7', fontStyle: 'italic' }}>
               Technology should democratize opportunity, not concentrate it.
             </span>
           </p>
@@ -1334,6 +1631,28 @@ export default function ZeroWebsite() {
               <span>↗</span>
             </a>
           </div>
+          </div>
+
+          {/* Right side - Profile Image */}
+          <div className="hero-image" style={{
+            flex: '0 0 auto',
+            animation: 'fadeIn 1s ease 0.6s forwards',
+            opacity: 0,
+            animationFillMode: 'forwards',
+            position: 'relative',
+          }}>
+            <img
+              src={profileHeroImg}
+              alt="Karthik Nagapuri"
+              style={{
+                height: 'auto',
+                objectFit: 'contain',
+                filter: 'drop-shadow(0 20px 60px rgba(196, 120, 90, 0.15))',
+                maskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
+                WebkitMaskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
+              }}
+            />
+          </div>
         </div>
 
         <div className="scroll-indicator" style={{
@@ -1358,49 +1677,7 @@ export default function ZeroWebsite() {
         </div>
       </section>
 
-
-      {/* Journey Section */}
-      <section className="section-padding" style={{
-        borderTop: `1px solid ${theme.border}`,
-      }}>
-        <AnimatedSection>
-          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-            <div style={{
-              fontFamily: "'Space Mono', monospace",
-              fontSize: '11px',
-              letterSpacing: '2px',
-              color: '#C4785A',
-              marginBottom: '16px',
-            }}>
-              MY JOURNEY
-            </div>
-            <h2 style={{
-              fontFamily: "'Instrument Serif', serif",
-              fontWeight: '400',
-              fontStyle: 'italic',
-              fontSize: 'clamp(28px, 6vw, 48px)',
-              marginBottom: '32px',
-              color: theme.text,
-            }}>
-              The story so far...
-            </h2>
-            <JourneyCards theme={theme} />
-          </div>
-        </AnimatedSection>
-      </section>
-
-      {/* Zero to Infinity Section */}
-      <section className="section-padding" style={{
-        borderTop: `1px solid ${theme.border}`,
-      }}>
-        <AnimatedSection>
-          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-            <ZeroInfinity theme={theme} />
-          </div>
-        </AnimatedSection>
-      </section>
-
-      {/* Right Now Section */}
+      {/* Interactive Map Section */}
       <section id="now" className="section-padding" style={{
         borderTop: `1px solid ${theme.border}`,
       }}>
@@ -1486,9 +1763,73 @@ export default function ZeroWebsite() {
                     fontSize: '14px',
                     lineHeight: '1.6',
                     color: theme.textSecondary,
+                    marginBottom: project.video_url ? '16px' : '0',
                   }}>
                     {project.description}
                   </p>
+
+                  {/* Video embed if available */}
+                  {project.video_url && (
+                    <div style={{
+                      position: 'relative',
+                      width: '100%',
+                      paddingBottom: '56.25%',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      background: theme.bgTertiary,
+                      marginTop: '8px',
+                    }}>
+                      <iframe
+                        src={project.video_url}
+                        title={`${project.title} Video`}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          border: 'none',
+                        }}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                  )}
+
+                  {/* External link button if available */}
+                  {project.link_url && (
+                    <a
+                      href={project.link_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        marginTop: '12px',
+                        padding: '8px 14px',
+                        background: theme.accentBg,
+                        color: theme.accent,
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontFamily: "'Space Mono', monospace",
+                        textDecoration: 'none',
+                        border: `1px solid ${theme.accent}`,
+                        transition: 'all 0.2s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = theme.accent;
+                        e.currentTarget.style.color = theme.bg;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = theme.accentBg;
+                        e.currentTarget.style.color = theme.accent;
+                      }}
+                    >
+                      {project.link_label || 'View More'} ↗
+                    </a>
+                  )}
                 </div>
               ))}
             </div>
@@ -1525,6 +1866,8 @@ export default function ZeroWebsite() {
               }}>
                 The journey so far
               </h2>
+
+
 
               {/* Origin Story */}
               <div style={{
@@ -1580,9 +1923,35 @@ export default function ZeroWebsite() {
                   fontSize: '14px',
                   fontStyle: 'italic',
                   color: theme.textMuted,
+                  marginBottom: '24px',
                 }}>
                   Zero isn't nothing — it's infinite possibility. The origin point from which everything begins.
                 </p>
+
+                {/* TEDx YouTube Video */}
+                <div style={{
+                  position: 'relative',
+                  width: '100%',
+                  paddingBottom: '56.25%',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  background: theme.bgTertiary,
+                }}>
+                  <iframe
+                    src="https://www.youtube.com/embed/CTuljx86jPU"
+                    title="TEDx Talk - Building Integrated Communities with Zero Mindset"
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      border: 'none',
+                    }}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
               </div>
 
               {/* Timeline items */}
@@ -1684,6 +2053,17 @@ export default function ZeroWebsite() {
                 </div>
               </div>
             </div>
+          </div>
+        </AnimatedSection>
+      </section>
+
+      {/* Zero to Infinity Section */}
+      <section className="section-padding" style={{
+        borderTop: `1px solid ${theme.border}`,
+      }}>
+        <AnimatedSection>
+          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+            <ZeroInfinity theme={theme} />
           </div>
         </AnimatedSection>
       </section>
@@ -2177,7 +2557,7 @@ export default function ZeroWebsite() {
                     color: theme.textSecondary,
                     marginBottom: '16px',
                   }}>
-                    {post.excerpt}
+                    {post.excerpt || (post.content ? post.content.replace(/[#*`]/g, '').slice(0, 200) + '...' : '')}
                   </p>
 
                   <div style={{
@@ -2264,21 +2644,13 @@ export default function ZeroWebsite() {
               color: theme.textSecondary,
               marginBottom: '32px',
             }}>
-              Building something absurdly bold? Looking to connect ecosystems?
-              <br />
-              Let's chat about startups, AI, or building founder-first communities.
+              Building something absurdly bold? A founder with conviction, an investor exploring Bharat, or an institution designing ecosystems — I'm open to the right conversations.
             </p>
-
-            {/* Visitor Counter */}
-            <VisitorCounter theme={theme} />
 
             {/* Contact Form */}
             <div style={{ marginTop: '32px', marginBottom: '32px' }}>
               <ContactForm theme={theme} />
             </div>
-
-            {/* Contact Buttons */}
-            <ContactButtons theme={theme} />
 
             <div style={{
               marginTop: '40px',

@@ -1,12 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from './supabaseClient';
+// SEED BLOG POSTS
+// Run this in browser console AFTER logging into /admin
+// This uses your authenticated session to insert the blog posts
 
-const BlogContext = createContext();
-
-// Fallback sample posts for when Supabase is not available
-const fallbackPosts = [
+const blogPosts = [
   {
-    id: '0',
     title: 'Why Zero?',
     excerpt: 'A personal story of loss, discovery, and finding strength in the void. How a random blog from 2014 became my lifeline during COVID.',
     content: `During COVID, I was with my parents and my sister. We had a tough time, like everyone else. Many people lost their dear ones. Many people lost their opportunities. Many people died during COVID.
@@ -42,14 +39,12 @@ Being Zero means going beyond all these potential social tags. Your potential is
 **Every day is so precious. Every day is a new year. Every day is a new birthday. Every day is a new life.**
 
 And that is me being the paradox of being Zero.`,
-    date: '2024-12-27',
-    readTime: '6 min',
     category: 'PERSONAL',
     published: true,
     featured: true,
+    read_time: '6 min'
   },
   {
-    id: '1',
     title: 'Why Middle India Will Birth the Next Unicorn',
     excerpt: 'The narrative of Indian startups is being rewritten. Not in Bangalore or Mumbai, but in places like Deoria, Raipur, and Ranchi.',
     content: `The narrative of Indian startups is being rewritten. Not in Bangalore or Mumbai, but in places like Deoria, Raipur, and Ranchi.
@@ -79,14 +74,12 @@ Every month, I meet founders who would be considered "uninvestable" by tradition
 The next unicorn won't come from a WeWork in Mumbai. It'll come from a small office in a city you've never heard of, built by someone who refused to play by the old rules.
 
 *This is why I do what I do. This is why EvolveX exists.*`,
-    date: '2024-12-15',
-    readTime: '4 min',
     category: 'ECOSYSTEM',
     published: true,
     featured: true,
+    read_time: '4 min'
   },
   {
-    id: '2',
     title: 'Building in Public: The EvolveX Journey',
     excerpt: 'From zero to 100+ startups. Lessons learned from building a founder-first community across Bharat.',
     content: `From zero to 100+ startups. Lessons learned from building a founder-first community across Bharat.
@@ -127,14 +120,12 @@ The lesson? Build something valuable, and the ecosystem comes to you.
 3. **Your background is your superpower** — Being from rural Telangana isn't a disadvantage. It's why I understand the founders I serve.
 
 The journey continues. And I'm documenting every step.`,
-    date: '2024-11-20',
-    readTime: '5 min',
     category: 'STARTUP',
     published: true,
     featured: false,
+    read_time: '5 min'
   },
   {
-    id: '3',
     title: 'The Train That Changed Everything',
     excerpt: "8,000 kilometers. 15 days. 500+ founders. What Jagriti Yatra taught me about India's entrepreneurial spirit.",
     content: `8,000 kilometers. 15 days. 500+ founders. What Jagriti Yatra taught me about India's entrepreneurial spirit.
@@ -179,14 +170,12 @@ Today, I manage Selections & Alumni for Jagriti Yatra. I help choose who gets th
 Every application I read, I think: "Could this be the next founder who changes everything?"
 
 *The train keeps moving. And so do we.*`,
-    date: '2023-12-10',
-    readTime: '5 min',
     category: 'JOURNEY',
     published: true,
     featured: false,
+    read_time: '5 min'
   },
   {
-    id: '4',
     title: 'Flow State: The Science of Being Zero',
     excerpt: 'When you enter flow, your mind quiets the inner narrator. Neuroscience meets ancient philosophy.',
     content: `When you enter flow, your mind quiets the inner narrator. In neuroscience, this correlates with reduced activity in self-referential networks and tighter coupling between attention and action.
@@ -232,307 +221,42 @@ This is exactly what ancient philosophies describe as "sunya" or emptiness. Not 
 The harder you try to achieve flow, the more it eludes you. You have to let go of trying. You have to become zero.
 
 *Less self-talk. More signal.*`,
-    date: '2024-12-20',
-    readTime: '4 min',
     category: 'PHILOSOPHY',
     published: true,
     featured: true,
-  },
+    read_time: '4 min'
+  }
 ];
 
-// Transform Supabase row to app format
-const transformPost = (row) => ({
-  id: row.id,
-  title: row.title,
-  excerpt: row.excerpt,
-  content: row.content,
-  category: row.category,
-  published: row.published,
-  featured: row.featured,
-  readTime: row.read_time,
-  date: row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-});
+// Copy everything below and paste in browser console while logged into admin:
+(async () => {
+  const SUPABASE_URL = 'https://jzbkpdxykuqbildukftz.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_xpQttjn7pfWme1SY8OzWOQ_YCE0HpJN';
 
-export function BlogProvider({ children }) {
-  const [posts, setPosts] = useState([]);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [useSupabase, setUseSupabase] = useState(true);
-  const [error, setError] = useState(null);
+  // Get auth token from localStorage
+  const authData = localStorage.getItem('sb-jzbkpdxykuqbildukftz-auth-token');
+  let accessToken = SUPABASE_ANON_KEY;
 
-  // Load posts from Supabase or localStorage
-  useEffect(() => {
-    const loadPosts = async () => {
-      try {
-        // Try Supabase first
-        const { data, error: supabaseError } = await supabase
-          .from('blog_posts')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (supabaseError) {
-          console.warn('Supabase error, falling back to localStorage:', supabaseError.message);
-          setUseSupabase(false);
-          loadFromLocalStorage();
-          return;
-        }
-
-        if (data && data.length > 0) {
-          setPosts(data.map(transformPost));
-          setUseSupabase(true);
-        } else {
-          // No data in Supabase, use fallback
-          console.log('No posts in Supabase, using fallback data');
-          setPosts(fallbackPosts);
-          setUseSupabase(false);
-        }
-        setIsLoaded(true);
-      } catch (err) {
-        console.warn('Failed to connect to Supabase, using localStorage:', err);
-        setUseSupabase(false);
-        loadFromLocalStorage();
-      }
-    };
-
-    const loadFromLocalStorage = () => {
-      const savedPosts = localStorage.getItem('zeroBlogPosts');
-      if (savedPosts) {
-        setPosts(JSON.parse(savedPosts));
-      } else {
-        setPosts(fallbackPosts);
-        localStorage.setItem('zeroBlogPosts', JSON.stringify(fallbackPosts));
-      }
-      setIsLoaded(true);
-    };
-
-    loadPosts();
-  }, []);
-
-  // Sync to localStorage when using localStorage mode
-  useEffect(() => {
-    if (isLoaded && !useSupabase) {
-      localStorage.setItem('zeroBlogPosts', JSON.stringify(posts));
-    }
-  }, [posts, isLoaded, useSupabase]);
-
-  // CRUD Operations
-  const createPost = async (postData) => {
-    const readTime = `${Math.ceil(postData.content.split(' ').length / 200)} min`;
-
-    if (useSupabase) {
-      try {
-        const { data, error } = await supabase
-          .from('blog_posts')
-          .insert([{
-            title: postData.title,
-            excerpt: postData.excerpt,
-            content: postData.content,
-            category: postData.category,
-            published: postData.published || false,
-            featured: postData.featured || false,
-            read_time: readTime,
-          }])
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        const newPost = transformPost(data);
-        setPosts(prev => [newPost, ...prev]);
-        return newPost;
-      } catch (err) {
-        console.error('Failed to create post in Supabase:', err);
-        setError(err.message);
-        return null;
-      }
-    } else {
-      // localStorage fallback
-      const newPost = {
-        ...postData,
-        id: Date.now().toString(),
-        date: new Date().toISOString().split('T')[0],
-        readTime,
-      };
-      setPosts(prev => [newPost, ...prev]);
-      return newPost;
-    }
-  };
-
-  const updatePost = async (id, postData) => {
-    const readTime = `${Math.ceil(postData.content.split(' ').length / 200)} min`;
-
-    if (useSupabase) {
-      try {
-        const { data, error } = await supabase
-          .from('blog_posts')
-          .update({
-            title: postData.title,
-            excerpt: postData.excerpt,
-            content: postData.content,
-            category: postData.category,
-            published: postData.published,
-            featured: postData.featured,
-            read_time: readTime,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', id)
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        setPosts(prev => prev.map(post =>
-          post.id === id ? transformPost(data) : post
-        ));
-      } catch (err) {
-        console.error('Failed to update post in Supabase:', err);
-        setError(err.message);
-      }
-    } else {
-      // localStorage fallback
-      setPosts(prev => prev.map(post =>
-        post.id === id
-          ? { ...post, ...postData, readTime }
-          : post
-      ));
-    }
-  };
-
-  const deletePost = async (id) => {
-    if (useSupabase) {
-      try {
-        const { error } = await supabase
-          .from('blog_posts')
-          .delete()
-          .eq('id', id);
-
-        if (error) throw error;
-
-        setPosts(prev => prev.filter(post => post.id !== id));
-      } catch (err) {
-        console.error('Failed to delete post from Supabase:', err);
-        setError(err.message);
-      }
-    } else {
-      // localStorage fallback
-      setPosts(prev => prev.filter(post => post.id !== id));
-    }
-  };
-
-  const getPost = (id) => {
-    return posts.find(post => post.id === id);
-  };
-
-  const getPublishedPosts = () => {
-    return posts.filter(post => post.published);
-  };
-
-  const getFeaturedPosts = () => {
-    return posts.filter(post => post.published && post.featured);
-  };
-
-  const togglePublish = async (id) => {
-    const post = posts.find(p => p.id === id);
-    if (!post) return;
-
-    if (useSupabase) {
-      try {
-        const { error } = await supabase
-          .from('blog_posts')
-          .update({ published: !post.published, updated_at: new Date().toISOString() })
-          .eq('id', id);
-
-        if (error) throw error;
-
-        setPosts(prev => prev.map(p =>
-          p.id === id ? { ...p, published: !p.published } : p
-        ));
-      } catch (err) {
-        console.error('Failed to toggle publish in Supabase:', err);
-        setError(err.message);
-      }
-    } else {
-      // localStorage fallback
-      setPosts(prev => prev.map(p =>
-        p.id === id ? { ...p, published: !p.published } : p
-      ));
-    }
-  };
-
-  const toggleFeatured = async (id) => {
-    const post = posts.find(p => p.id === id);
-    if (!post) return;
-
-    if (useSupabase) {
-      try {
-        const { error } = await supabase
-          .from('blog_posts')
-          .update({ featured: !post.featured, updated_at: new Date().toISOString() })
-          .eq('id', id);
-
-        if (error) throw error;
-
-        setPosts(prev => prev.map(p =>
-          p.id === id ? { ...p, featured: !p.featured } : p
-        ));
-      } catch (err) {
-        console.error('Failed to toggle featured in Supabase:', err);
-        setError(err.message);
-      }
-    } else {
-      // localStorage fallback
-      setPosts(prev => prev.map(p =>
-        p.id === id ? { ...p, featured: !p.featured } : p
-      ));
-    }
-  };
-
-  // Refresh posts from Supabase
-  const refreshPosts = async () => {
-    if (!useSupabase) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('blog_posts')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      setPosts(data.map(transformPost));
-    } catch (err) {
-      console.error('Failed to refresh posts:', err);
-      setError(err.message);
-    }
-  };
-
-  return (
-    <BlogContext.Provider value={{
-      posts,
-      isLoaded,
-      useSupabase,
-      error,
-      createPost,
-      updatePost,
-      deletePost,
-      getPost,
-      getPublishedPosts,
-      getFeaturedPosts,
-      togglePublish,
-      toggleFeatured,
-      refreshPosts,
-    }}>
-      {children}
-    </BlogContext.Provider>
-  );
-}
-
-// eslint-disable-next-line react-refresh/only-export-components
-export function useBlog() {
-  const context = useContext(BlogContext);
-  if (!context) {
-    throw new Error('useBlog must be used within a BlogProvider');
+  if (authData) {
+    const parsed = JSON.parse(authData);
+    accessToken = parsed.access_token || SUPABASE_ANON_KEY;
+    console.log('Using authenticated session');
+  } else {
+    console.log('No auth session found - using anon key (may fail if RLS enabled)');
   }
-  return context;
-}
 
-export default BlogContext;
+  for (const post of blogPosts) {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/blog_posts`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(post)
+    });
+    console.log(`Inserted: ${post.title}`, response.ok ? '✓' : '✗', response.status);
+  }
+  console.log('Done! Refresh the page to see your blog posts.');
+})();

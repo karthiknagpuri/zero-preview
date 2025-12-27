@@ -35,6 +35,7 @@ const AdminLayout = () => {
     if (path.includes('/map')) return 'Map Editor';
     if (path.includes('/gallery')) return 'Gallery';
     if (path.includes('/experiences')) return 'Experiences';
+    if (path.includes('/reading')) return 'Reading Log';
     if (path.includes('/messages')) return 'Messages';
     if (path.includes('/content')) return 'Content Studio';
     return 'Dashboard';
