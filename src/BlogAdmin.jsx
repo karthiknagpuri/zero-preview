@@ -1,14 +1,29 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useBlog } from './BlogContext';
+import { parseMarkdown } from './utils/parseMarkdown';
+import { aiAutoFormat } from './utils/aiFormat';
+import { supabase } from './supabaseClient';
 
-const CATEGORIES = ['ECOSYSTEM', 'STARTUP', 'JOURNEY', 'TECH', 'PERSONAL', 'INSIGHTS'];
+const CATEGORIES = ['ECOSYSTEM', 'STARTUP', 'JOURNEY', 'TECH', 'PERSONAL', 'INSIGHTS', 'PHILOSOPHY'];
 
 export default function BlogAdmin({ onClose, editPostId = null }) {
   const { posts, createPost, updatePost, deletePost, togglePublish, getPost } = useBlog();
-  const [view, setView] = useState(editPostId ? 'edit' : 'list'); // 'list', 'create', 'edit'
+  const [view, setView] = useState(editPostId ? 'edit' : 'list');
   const [selectedPost, setSelectedPost] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [isFormatting, setIsFormatting] = useState(false);
+  const [formatError, setFormatError] = useState(null);
+  const textareaRef = useRef(null);
   const initializedRef = useRef(false);
+
+  // API Settings state
+  const [apiSettings, setApiSettings] = useState({
+    anthropicKey: '',
+    openaiKey: '',
+    preferredProvider: 'anthropic',
+  });
+  const [settingsSaved, setSettingsSaved] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -17,12 +32,52 @@ export default function BlogAdmin({ onClose, editPostId = null }) {
     category: 'ECOSYSTEM',
     published: false,
     featured: false,
+    visibility: 'public',
+    password: '',
   });
+
+  // Load API settings (localStorage fallback if Supabase table doesn't exist)
+  useEffect(() => {
+    const loadSettings = async () => {
+      // Try localStorage first (faster)
+      const localSettings = localStorage.getItem('blog_api_settings');
+      if (localSettings) {
+        try {
+          const parsed = JSON.parse(localSettings);
+          setApiSettings(parsed);
+        } catch (e) {
+          console.log('Invalid localStorage settings');
+        }
+      }
+
+      // Also try Supabase (if table exists)
+      try {
+        const { data } = await supabase
+          .from('api_settings')
+          .select('*')
+          .single();
+
+        if (data) {
+          const supabaseSettings = {
+            anthropicKey: data.anthropic_key || '',
+            openaiKey: data.openai_key || '',
+            preferredProvider: data.preferred_provider || 'anthropic',
+          };
+          setApiSettings(supabaseSettings);
+          // Sync to localStorage
+          localStorage.setItem('blog_api_settings', JSON.stringify(supabaseSettings));
+        }
+      } catch (err) {
+        // Settings table might not exist - use localStorage only
+        console.log('Supabase settings not available, using localStorage');
+      }
+    };
+    loadSettings();
+  }, []);
 
   // Initialize form with edit post data
   useEffect(() => {
     if (!editPostId || initializedRef.current) return;
-
     const post = getPost(editPostId);
     if (post) {
       initializedRef.current = true;
@@ -30,11 +85,88 @@ export default function BlogAdmin({ onClose, editPostId = null }) {
       setSelectedPost(post);
       setView('edit');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editPostId]);
+  }, [editPostId, getPost]);
+
+  // Save API settings (localStorage + Supabase)
+  const saveApiSettings = async () => {
+    // Always save to localStorage (works without Supabase table)
+    localStorage.setItem('blog_api_settings', JSON.stringify(apiSettings));
+
+    // Try to save to Supabase (may fail if table doesn't exist)
+    try {
+      const { error } = await supabase
+        .from('api_settings')
+        .upsert({
+          id: 1,
+          anthropic_key: apiSettings.anthropicKey,
+          openai_key: apiSettings.openaiKey,
+          preferred_provider: apiSettings.preferredProvider,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) {
+        console.log('Supabase save skipped (table may not exist), using localStorage');
+      }
+    } catch (err) {
+      console.log('Supabase save failed, using localStorage only');
+    }
+
+    setSettingsSaved(true);
+    setTimeout(() => setSettingsSaved(false), 2000);
+  };
+
+  // Format toolbar insert
+  const insertFormat = (before, after = '') => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = formData.content;
+    const selectedText = text.substring(start, end);
+
+    const newText = text.substring(0, start) + before + selectedText + after + text.substring(end);
+    setFormData({ ...formData, content: newText });
+
+    // Restore cursor position
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + before.length, start + before.length + selectedText.length);
+    }, 0);
+  };
+
+  // AI Auto-format handler
+  const handleAIFormat = async () => {
+    if (!formData.content.trim()) {
+      setFormatError('No content to format');
+      return;
+    }
+
+    if (!apiSettings.anthropicKey && !apiSettings.openaiKey) {
+      setFormatError('Configure API keys in Settings first');
+      setShowSettings(true);
+      return;
+    }
+
+    setIsFormatting(true);
+    setFormatError(null);
+
+    try {
+      const formatted = await aiAutoFormat(formData.content, apiSettings);
+      setFormData({ ...formData, content: formatted });
+    } catch (err) {
+      setFormatError(err.message);
+    } finally {
+      setIsFormatting(false);
+    }
+  };
 
   const handleEdit = (post) => {
-    setFormData(post);
+    setFormData({
+      ...post,
+      visibility: post.visibility || 'public',
+      password: post.password || '',
+    });
     setSelectedPost(post);
     setView('edit');
   };
@@ -47,6 +179,8 @@ export default function BlogAdmin({ onClose, editPostId = null }) {
       category: 'ECOSYSTEM',
       published: false,
       featured: false,
+      visibility: 'public',
+      password: '',
     });
     setSelectedPost(null);
     setView('create');
@@ -76,7 +210,7 @@ export default function BlogAdmin({ onClose, editPostId = null }) {
       overflow: 'auto',
     },
     container: {
-      maxWidth: '1000px',
+      maxWidth: '1400px',
       margin: '0 auto',
       padding: '24px',
       minHeight: '100vh',
@@ -114,6 +248,16 @@ export default function BlogAdmin({ onClose, editPostId = null }) {
       fontFamily: "'Space Mono', monospace",
       fontSize: '12px',
       letterSpacing: '1px',
+      marginRight: '12px',
+    },
+    settingsBtn: {
+      background: 'none',
+      border: '1px solid rgba(255,255,255,0.2)',
+      color: '#A0A0A0',
+      padding: '10px 20px',
+      cursor: 'pointer',
+      fontFamily: "'Space Mono', monospace",
+      fontSize: '12px',
       marginRight: '12px',
     },
     table: {
@@ -160,8 +304,72 @@ export default function BlogAdmin({ onClose, editPostId = null }) {
       fontFamily: "'Space Mono', monospace",
       transition: 'color 0.3s ease',
     },
-    form: {
-      maxWidth: '800px',
+    // Editor styles
+    editorContainer: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: '24px',
+    },
+    editorPanel: {
+      display: 'flex',
+      flexDirection: 'column',
+    },
+    previewPanel: {
+      background: 'rgba(255,255,255,0.02)',
+      border: '1px solid rgba(255,255,255,0.1)',
+      borderRadius: '4px',
+      overflow: 'auto',
+      maxHeight: '600px',
+    },
+    previewHeader: {
+      padding: '12px 16px',
+      borderBottom: '1px solid rgba(255,255,255,0.1)',
+      fontFamily: "'Space Mono', monospace",
+      fontSize: '10px',
+      letterSpacing: '2px',
+      color: '#666',
+    },
+    previewContent: {
+      padding: '24px',
+      color: '#D0D0D0',
+      fontFamily: "'Source Serif 4', serif",
+      fontSize: '16px',
+      lineHeight: '1.8',
+    },
+    toolbar: {
+      display: 'flex',
+      gap: '4px',
+      marginBottom: '12px',
+      flexWrap: 'wrap',
+      padding: '8px',
+      background: 'rgba(255,255,255,0.02)',
+      border: '1px solid rgba(255,255,255,0.1)',
+      borderBottom: 'none',
+    },
+    toolbarBtn: {
+      background: 'rgba(255,255,255,0.05)',
+      border: '1px solid rgba(255,255,255,0.1)',
+      color: '#A0A0A0',
+      padding: '8px 12px',
+      cursor: 'pointer',
+      fontFamily: "'Space Mono', monospace",
+      fontSize: '11px',
+      transition: 'all 0.2s ease',
+    },
+    toolbarBtnActive: {
+      background: '#C4785A',
+      color: '#0D0D0D',
+      border: '1px solid #C4785A',
+    },
+    aiBtn: {
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      border: 'none',
+      color: '#fff',
+      padding: '8px 16px',
+      cursor: 'pointer',
+      fontFamily: "'Space Mono', monospace",
+      fontSize: '11px',
+      marginLeft: 'auto',
     },
     formGroup: {
       marginBottom: '24px',
@@ -184,7 +392,7 @@ export default function BlogAdmin({ onClose, editPostId = null }) {
       fontSize: '16px',
       fontFamily: "'Source Serif 4', serif",
       outline: 'none',
-      transition: 'border-color 0.3s ease',
+      boxSizing: 'border-box',
     },
     textarea: {
       width: '100%',
@@ -197,6 +405,7 @@ export default function BlogAdmin({ onClose, editPostId = null }) {
       outline: 'none',
       resize: 'vertical',
       lineHeight: '1.7',
+      boxSizing: 'border-box',
     },
     select: {
       padding: '14px 16px',
@@ -243,7 +452,7 @@ export default function BlogAdmin({ onClose, editPostId = null }) {
       fontFamily: "'Space Mono', monospace",
       fontSize: '12px',
     },
-    deleteModal: {
+    modal: {
       position: 'fixed',
       top: '50%',
       left: '50%',
@@ -252,7 +461,7 @@ export default function BlogAdmin({ onClose, editPostId = null }) {
       border: '1px solid rgba(255,255,255,0.1)',
       padding: '32px',
       zIndex: 3000,
-      maxWidth: '400px',
+      maxWidth: '500px',
       width: '90%',
     },
     modalOverlay: {
@@ -261,12 +470,182 @@ export default function BlogAdmin({ onClose, editPostId = null }) {
       background: 'rgba(0,0,0,0.8)',
       zIndex: 2500,
     },
+    error: {
+      color: '#ff6b6b',
+      fontSize: '12px',
+      marginTop: '8px',
+      fontFamily: "'Space Mono', monospace",
+    },
+    success: {
+      color: '#4ECDC4',
+      fontSize: '12px',
+      marginTop: '8px',
+      fontFamily: "'Space Mono', monospace",
+    },
     emptyState: {
       textAlign: 'center',
       padding: '60px 20px',
       color: '#666',
     },
   };
+
+  // Settings Modal
+  const SettingsModal = () => (
+    <>
+      <div style={styles.modalOverlay} onClick={() => setShowSettings(false)} />
+      <div style={styles.modal}>
+        <h3 style={{ color: '#F5F2EB', marginBottom: '24px', fontFamily: "'Instrument Serif', serif", fontSize: '24px' }}>
+          API Settings
+        </h3>
+
+        <div style={styles.formGroup}>
+          <label style={styles.label}>Anthropic API Key (Claude)</label>
+          <input
+            type="password"
+            style={styles.input}
+            value={apiSettings.anthropicKey}
+            onChange={(e) => setApiSettings({ ...apiSettings, anthropicKey: e.target.value })}
+            placeholder="sk-ant-..."
+          />
+        </div>
+
+        <div style={styles.formGroup}>
+          <label style={styles.label}>OpenAI API Key (GPT)</label>
+          <input
+            type="password"
+            style={styles.input}
+            value={apiSettings.openaiKey}
+            onChange={(e) => setApiSettings({ ...apiSettings, openaiKey: e.target.value })}
+            placeholder="sk-..."
+          />
+        </div>
+
+        <div style={styles.formGroup}>
+          <label style={styles.label}>Preferred Provider</label>
+          <select
+            style={styles.select}
+            value={apiSettings.preferredProvider}
+            onChange={(e) => setApiSettings({ ...apiSettings, preferredProvider: e.target.value })}
+          >
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="openai">OpenAI (GPT)</option>
+          </select>
+        </div>
+
+        {settingsSaved && <p style={styles.success}>Settings saved!</p>}
+
+        <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+          <button style={styles.submitBtn} onClick={saveApiSettings}>
+            SAVE SETTINGS
+          </button>
+          <button style={styles.cancelBtn} onClick={() => setShowSettings(false)}>
+            CLOSE
+          </button>
+        </div>
+      </div>
+    </>
+  );
+
+  // Formatting Toolbar
+  const FormattingToolbar = () => (
+    <div style={styles.toolbar}>
+      <button
+        type="button"
+        style={styles.toolbarBtn}
+        onClick={() => insertFormat('# ')}
+        title="Heading 1"
+      >
+        H1
+      </button>
+      <button
+        type="button"
+        style={styles.toolbarBtn}
+        onClick={() => insertFormat('## ')}
+        title="Heading 2"
+      >
+        H2
+      </button>
+      <button
+        type="button"
+        style={styles.toolbarBtn}
+        onClick={() => insertFormat('### ')}
+        title="Heading 3"
+      >
+        H3
+      </button>
+      <span style={{ width: '1px', background: 'rgba(255,255,255,0.1)', margin: '0 8px' }} />
+      <button
+        type="button"
+        style={styles.toolbarBtn}
+        onClick={() => insertFormat('**', '**')}
+        title="Bold"
+      >
+        <strong>B</strong>
+      </button>
+      <button
+        type="button"
+        style={styles.toolbarBtn}
+        onClick={() => insertFormat('*', '*')}
+        title="Italic"
+      >
+        <em>I</em>
+      </button>
+      <button
+        type="button"
+        style={styles.toolbarBtn}
+        onClick={() => insertFormat('`', '`')}
+        title="Code"
+      >
+        {'</>'}
+      </button>
+      <span style={{ width: '1px', background: 'rgba(255,255,255,0.1)', margin: '0 8px' }} />
+      <button
+        type="button"
+        style={styles.toolbarBtn}
+        onClick={() => insertFormat('- ')}
+        title="Bullet List"
+      >
+        • List
+      </button>
+      <button
+        type="button"
+        style={styles.toolbarBtn}
+        onClick={() => insertFormat('1. ')}
+        title="Numbered List"
+      >
+        1. List
+      </button>
+      <button
+        type="button"
+        style={styles.toolbarBtn}
+        onClick={() => insertFormat('> ')}
+        title="Quote"
+      >
+        " Quote
+      </button>
+      <button
+        type="button"
+        style={styles.toolbarBtn}
+        onClick={() => insertFormat('\n---\n')}
+        title="Divider"
+      >
+        ―
+      </button>
+      <button
+        type="button"
+        style={{
+          ...styles.aiBtn,
+          opacity: isFormatting ? 0.7 : 1,
+          cursor: isFormatting ? 'wait' : 'pointer',
+        }}
+        onClick={handleAIFormat}
+        disabled={isFormatting}
+        title="AI Auto-Format"
+      >
+        {isFormatting ? 'Formatting...' : '✨ AI Format'}
+      </button>
+    </div>
+  );
 
   return (
     <div style={styles.overlay}>
@@ -278,9 +657,19 @@ export default function BlogAdmin({ onClose, editPostId = null }) {
           </h1>
           <div>
             {view === 'list' && (
-              <button style={styles.createBtn} onClick={handleCreate}>
-                + NEW POST
-              </button>
+              <>
+                <button style={styles.createBtn} onClick={handleCreate}>
+                  + NEW POST
+                </button>
+                <button
+                  style={styles.settingsBtn}
+                  onClick={() => setShowSettings(true)}
+                  onMouseEnter={(e) => e.target.style.borderColor = '#C4785A'}
+                  onMouseLeave={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.2)'}
+                >
+                  ⚙ SETTINGS
+                </button>
+              </>
             )}
             <button
               style={styles.closeBtn}
@@ -320,7 +709,7 @@ export default function BlogAdmin({ onClose, editPostId = null }) {
                       <td style={styles.td}>
                         <div style={styles.postTitle}>{post.title}</div>
                         <div style={{ fontSize: '12px', color: '#666' }}>
-                          {post.excerpt.substring(0, 60)}...
+                          {post.excerpt?.substring(0, 60)}...
                         </div>
                       </td>
                       <td style={styles.td}>
@@ -347,6 +736,24 @@ export default function BlogAdmin({ onClose, editPostId = null }) {
                             color: '#FFE66D',
                           }}>
                             Featured
+                          </span>
+                        )}
+                        {post.visibility === 'private' && (
+                          <span style={{
+                            ...styles.badge,
+                            background: 'rgba(255,107,107,0.1)',
+                            color: '#ff6b6b',
+                          }}>
+                            Private
+                          </span>
+                        )}
+                        {post.visibility === 'password' && (
+                          <span style={{
+                            ...styles.badge,
+                            background: 'rgba(155,89,182,0.1)',
+                            color: '#9b59b6',
+                          }}>
+                            Protected
                           </span>
                         )}
                       </td>
@@ -391,7 +798,7 @@ export default function BlogAdmin({ onClose, editPostId = null }) {
 
         {/* Create/Edit Form */}
         {(view === 'create' || view === 'edit') && (
-          <form style={styles.form} onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit}>
             <div style={styles.formGroup}>
               <label style={styles.label}>Title</label>
               <input
@@ -401,8 +808,6 @@ export default function BlogAdmin({ onClose, editPostId = null }) {
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="Enter post title..."
                 required
-                onFocus={(e) => e.target.style.borderColor = '#C4785A'}
-                onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
               />
             </div>
 
@@ -414,36 +819,62 @@ export default function BlogAdmin({ onClose, editPostId = null }) {
                 onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
                 placeholder="Brief description of the post..."
                 required
-                onFocus={(e) => e.target.style.borderColor = '#C4785A'}
-                onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
               />
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Content (Markdown supported)</label>
-              <textarea
-                style={{ ...styles.textarea, minHeight: '400px' }}
-                value={formData.content}
-                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                placeholder="Write your blog post content here...
+              <label style={styles.label}>Content (Markdown)</label>
+              <div style={styles.editorContainer}>
+                {/* Editor Panel */}
+                <div style={styles.editorPanel}>
+                  <FormattingToolbar />
+                  <textarea
+                    ref={textareaRef}
+                    style={{ ...styles.textarea, minHeight: '500px', borderTop: 'none' }}
+                    value={formData.content}
+                    onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                    placeholder="Write your blog post content here...
 
-Markdown is supported:
-# Heading 1
-## Heading 2
-**bold** and *italic*
-- bullet points
-1. numbered lists"
-                required
-                onFocus={(e) => e.target.style.borderColor = '#C4785A'}
-                onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
-              />
+Paste raw text and click 'AI Format' to auto-format with markdown.
+
+Or use the toolbar buttons to format manually."
+                    required
+                  />
+                  {formatError && <p style={styles.error}>{formatError}</p>}
+                </div>
+
+                {/* Preview Panel */}
+                <div style={styles.previewPanel}>
+                  <div style={styles.previewHeader}>LIVE PREVIEW</div>
+                  <div style={styles.previewContent}>
+                    {formData.content ? (
+                      parseMarkdown(formData.content)
+                    ) : (
+                      <p style={{ color: '#666', fontStyle: 'italic' }}>
+                        Start typing to see preview...
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+            {/* Post Settings Row */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: '24px',
+              marginTop: '16px',
+              padding: '24px',
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '4px',
+            }}>
+              {/* Category */}
               <div style={styles.formGroup}>
                 <label style={styles.label}>Category</label>
                 <select
-                  style={styles.select}
+                  style={{ ...styles.select, width: '100%' }}
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 >
@@ -453,9 +884,41 @@ Markdown is supported:
                 </select>
               </div>
 
+              {/* Visibility */}
+              <div style={styles.formGroup}>
+                <label style={{ ...styles.label, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '14px' }}>🔒</span> Visibility
+                </label>
+                <select
+                  style={{ ...styles.select, width: '100%' }}
+                  value={formData.visibility}
+                  onChange={(e) => setFormData({ ...formData, visibility: e.target.value, password: e.target.value !== 'password' ? '' : formData.password })}
+                >
+                  <option value="public">🌐 Public</option>
+                  <option value="private">🔐 Private (Admin Only)</option>
+                  <option value="password">🔑 Password Protected</option>
+                </select>
+              </div>
+
+              {/* Password Field - Shows when password protection selected */}
+              {formData.visibility === 'password' && (
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Post Password</label>
+                  <input
+                    type="text"
+                    style={{ ...styles.input, width: '100%' }}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="Enter password..."
+                    required={formData.visibility === 'password'}
+                  />
+                </div>
+              )}
+
+              {/* Options */}
               <div style={styles.formGroup}>
                 <label style={styles.label}>Options</label>
-                <div style={{ display: 'flex', gap: '24px' }}>
+                <div style={{ display: 'flex', gap: '24px', paddingTop: '8px' }}>
                   <label style={styles.checkbox}>
                     <input
                       type="checkbox"
@@ -493,11 +956,14 @@ Markdown is supported:
           </form>
         )}
 
+        {/* Settings Modal */}
+        {showSettings && <SettingsModal />}
+
         {/* Delete Confirmation Modal */}
         {showDeleteConfirm && (
           <>
             <div style={styles.modalOverlay} onClick={() => setShowDeleteConfirm(null)} />
-            <div style={styles.deleteModal}>
+            <div style={styles.modal}>
               <h3 style={{ color: '#F5F2EB', marginBottom: '16px', fontFamily: "'Instrument Serif', serif" }}>
                 Delete Post?
               </h3>

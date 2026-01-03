@@ -240,6 +240,13 @@ The harder you try to achieve flow, the more it eludes you. You have to let go o
   },
 ];
 
+// Visibility options: 'public', 'private', 'password'
+const VISIBILITY = {
+  PUBLIC: 'public',
+  PRIVATE: 'private',
+  PASSWORD: 'password',
+};
+
 // Transform Supabase row to app format
 const transformPost = (row) => ({
   id: row.id,
@@ -249,6 +256,8 @@ const transformPost = (row) => ({
   category: row.category,
   published: row.published,
   featured: row.featured,
+  visibility: row.visibility || 'public',
+  password: row.password || '',
   readTime: row.read_time,
   date: row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
 });
@@ -329,6 +338,8 @@ export function BlogProvider({ children }) {
             category: postData.category,
             published: postData.published || false,
             featured: postData.featured || false,
+            visibility: postData.visibility || 'public',
+            password: postData.visibility === 'password' ? postData.password : null,
             read_time: readTime,
           }])
           .select()
@@ -371,6 +382,8 @@ export function BlogProvider({ children }) {
             category: postData.category,
             published: postData.published,
             featured: postData.featured,
+            visibility: postData.visibility || 'public',
+            password: postData.visibility === 'password' ? postData.password : null,
             read_time: readTime,
             updated_at: new Date().toISOString(),
           })
@@ -423,11 +436,17 @@ export function BlogProvider({ children }) {
   };
 
   const getPublishedPosts = () => {
-    return posts.filter(post => post.published);
+    return posts.filter(post => post.published && post.visibility !== 'private');
   };
 
   const getFeaturedPosts = () => {
-    return posts.filter(post => post.published && post.featured);
+    return posts.filter(post => post.published && post.featured && post.visibility !== 'private');
+  };
+
+  const verifyPostPassword = (postId, password) => {
+    const post = posts.find(p => p.id === postId);
+    if (!post || post.visibility !== 'password') return true;
+    return post.password === password;
   };
 
   const togglePublish = async (id) => {
@@ -517,6 +536,7 @@ export function BlogProvider({ children }) {
       getPost,
       getPublishedPosts,
       getFeaturedPosts,
+      verifyPostPassword,
       togglePublish,
       toggleFeatured,
       refreshPosts,
