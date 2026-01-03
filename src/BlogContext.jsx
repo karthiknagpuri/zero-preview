@@ -247,10 +247,21 @@ const VISIBILITY = {
   PASSWORD: 'password',
 };
 
+// Generate slug from title
+const generateSlug = (title) => {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .trim();
+};
+
 // Transform Supabase row to app format
 const transformPost = (row) => ({
   id: row.id,
   title: row.title,
+  slug: row.slug || generateSlug(row.title),
   excerpt: row.excerpt,
   content: row.content,
   category: row.category,
@@ -333,6 +344,7 @@ export function BlogProvider({ children }) {
           .from('blog_posts')
           .insert([{
             title: postData.title,
+            slug: postData.slug || generateSlug(postData.title),
             excerpt: postData.excerpt,
             content: postData.content,
             category: postData.category,
@@ -377,6 +389,7 @@ export function BlogProvider({ children }) {
           .from('blog_posts')
           .update({
             title: postData.title,
+            slug: postData.slug || generateSlug(postData.title),
             excerpt: postData.excerpt,
             content: postData.content,
             category: postData.category,
